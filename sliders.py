@@ -109,7 +109,8 @@ color_mapper = LinearColorMapper(palette = 'Magma256', low = min(source.data['ti
 color_bar = ColorBar(color_mapper = color_mapper, ticker = LogTicker(),
                 label_standoff = 12, border_line_color = None, location = (0,0))
 #plot
-p = figure(plot_width = 1200, plot_height = 1200)
+TOOLS="hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,box_select,poly_select,lasso_select,"
+p = figure(plot_width = 1200, plot_height = 1200, tools = TOOLS)
 r = p.scatter (x = 'longitude.anon', y = 'latitude', source = source, color = {'field': 'timenums', 'transform': color_mapper})
 p.add_layout(color_bar, 'right')
 
