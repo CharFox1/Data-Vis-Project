@@ -23,8 +23,12 @@ from bokeh.themes import Theme
 from bokeh.layouts import column
 from bokeh.plotting import figure
 from bokeh.models import LinearColorMapper, LogTicker, ColorBar, RadioButtonGroup, CustomJS, Slider
+from bokeh.plotting import figure, output_file, show
+from bokeh.models import ColumnDataSource, Circle, HoverTool, CustomJS
+from bokeh.plotting import figure
 import datetime
 import calendar
+import miniVis
 
 import numpy as np
 import pandas as pd
@@ -95,7 +99,12 @@ for time in df['time']:
    
 df['timenums'] = timenums
 
+# convert numbers back to time for pretty display
+def pretty_time(time):
+    return datetime.fromtimestamp(time).strftime("%A, %B %d, %Y %I:%M:%S")
+
 #def data_viz(doc): 
+
     
 #initial dataset
 gdf = df[df['disaster.event'] == '33_Baltimore'][['latitude', 'longitude.anon', 'timenums']]
@@ -110,9 +119,13 @@ color_bar = ColorBar(color_mapper = color_mapper, ticker = LogTicker(),
                 label_standoff = 12, border_line_color = None, location = (0,0))
 #plot
 TOOLS="hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,box_select,poly_select,lasso_select,"
-p = figure(plot_width = 1200, plot_height = 1200, tools = TOOLS)
+p = figure(plot_width = 1000, plot_height = 1000, tools = TOOLS)
 r = p.scatter (x = 'longitude.anon', y = 'latitude', source = source, color = {'field': 'timenums', 'transform': color_mapper})
 p.add_layout(color_bar, 'right')
+
+q = miniVis.miniPlot(gdf, 'longitude.anon', 'latitude', "test")
+
+show(column(p, q))
 
 #add radio buttons
 def update(new): 
@@ -126,6 +139,10 @@ def update(new):
 	
     slider.start = min(r.data_source.data['timenums'])
     slider.end = max(r.data_source.data['timenums'])
+
+    q = miniVis.miniPlot(source, "sure", "yeah", "test")
+
+    show(column(p, q))
     
 radio_button_group = RadioButtonGroup(labels = [i for i in df['disaster.event'].unique()], active = 12)
 radio_button_group.on_click(update)
@@ -151,4 +168,3 @@ curdoc().theme = Theme(json=yaml.load("""
             width: 1800
     
 """))
-
