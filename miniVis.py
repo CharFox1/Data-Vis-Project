@@ -23,16 +23,75 @@ import calendar
 import numpy as np
 import pandas as pd
 
-def miniPlot(source, xName, yName, disaster):
+# splits df into split buckets and returns list of smaller dfs
+def splitTime(source, split):
+
+    #source.sort_values(by=['timenums'])
+    z = source['timenums'].tolist()
+    z.sort()
+
+    minNum = min(z)
+    maxNum = max(z)
+
+    rangeNum = maxNum - minNum
+    print(rangeNum)
+    splitNum = rangeNum/split
+
+    newDF = []
+    newDF.append(minNum)
+
+    for i in range(split):
+        minNum += splitNum
+        newDF.append(minNum)
+        
+    print(newDF)
+    
+    return newDF
+
+# convert numbers back to time for pretty display
+def pretty_time(time):
+    return datetime.fromtimestamp(time).strftime("%A, %B %d, %Y %I:%M:%S")
+
+def miniPlot(source):
 
     # Shamelessly stolen from bokeh doccumentation
     # https://docs.bokeh.org/en/0.10.0/docs/user_guide/interaction.html#userguide-interaction-actions-widget-callbacks
     # some minor additions to work with our data
 
-    (x,y) = (source['longitude.anon'], source['latitude'])
+    dayDensity = []
+    dayTime = []
+    #source.sort_values(by=['timenums'])
+    z = source['timenums'].tolist()
+    z.sort()
+    print("length of z = ", len(z))
 
-    # removed x_axis_type="datetime",
-    p = figure(width=400, height=400, tools="", toolbar_location=None, title='Hover over points')
+    minNum = min(z)//(3600*24)
+    maxNum = max(z)//(3600*24)
+    rangeDays = maxNum - minNum
+    print("rangeDays =", rangeDays)
+
+    j = 0
+    count = 0
+    for i in range(rangeDays):
+        print("new day location = ", minNum + i)
+        while((z[j]//(3600*24) == minNum+i)):
+            count +=1
+            j +=1
+        dayDensity.append(count)
+        count = 0
+        dayTime.append(z[j])
+
+    #d = {'density': hourDensity, 'time': hourTime}
+    #newDF = pd.DataFrame(data=d)
+
+    print("length of dayDensity = ", len(dayDensity))
+    print(dayDensity)
+    print("length of dayTime = ", len(dayTime))
+    print(dayTime)
+
+    (x,y) = (dayTime, dayDensity)
+
+    p = figure(width=1000, height=400, tools="", toolbar_location=None, title='Tweet Density Per Day', sizing_mode="scale_width")
     p.line(x, y, line_dash="4 4", line_width=1, color='gray')
 
     # Add a circle, that is visible only when selected
@@ -47,3 +106,4 @@ def miniPlot(source, xName, yName, disaster):
     p.add_tools(HoverTool(tooltips=None, callback=callback, renderers=[cr], mode='hline'))
 
     return p
+

@@ -108,6 +108,8 @@ def pretty_time(time):
     
 #initial dataset
 gdf = df[df['disaster.event'] == '33_Baltimore'][['latitude', 'longitude.anon', 'timenums']]
+#smalData = miniVis.splitTime(gdf, 3)
+#gdf = smalData[0]
 
 #.sample(n = 10000)
 
@@ -119,52 +121,58 @@ color_bar = ColorBar(color_mapper = color_mapper, ticker = LogTicker(),
                 label_standoff = 12, border_line_color = None, location = (0,0))
 #plot
 TOOLS="hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,box_select,poly_select,lasso_select,"
-p = figure(plot_width = 1000, plot_height = 1000, tools = TOOLS)
-r = p.scatter (x = 'longitude.anon', y = 'latitude', source = source, color = {'field': 'timenums', 'transform': color_mapper})
+p = figure(plot_width = 1000, plot_height = 1000, tools = TOOLS, sizing_mode="scale_width")
+r = p.scatter(x = 'longitude.anon', y = 'latitude', source = source, color = {'field': 'timenums', 'transform': color_mapper})
 p.add_layout(color_bar, 'right')
 
-q = miniVis.miniPlot(gdf, 'longitude.anon', 'latitude', "test")
-
-show(column(p, q))
+q = miniVis.miniPlot(gdf)
 
 #add radio buttons
-def update(new): 
+def disasterUpdate(new): 
         
-    gdf = df[df['disaster.event'] == df['disaster.event'].unique()[new]][['latitude','longitude.anon', 'timenums']]
+    update(new, time_button_group.active)
+
+
+def timeUpdate(new):
+
+    update(radio_button_group.active, new)
+
+def update(disaster, time): 
+
+    gdf = df[df['disaster.event'] == df['disaster.event'].unique()[radio_button_group.active]][['latitude','longitude.anon', 'timenums']]
+
+    if(time_button_group.active > 0): 
+
+        time = time_button_group.active
+        times = miniVis.splitTime(gdf, 10)
+        gdf = gdf[(gdf['timenums'] > times[time - 1]) & (gdf['timenums'] < times[time])]
+
+    print(gdf)
     source = ColumnDataSource(data = gdf)
     r.data_source.data = source.data
     
     color_mapper.low = min(r.data_source.data['timenums'])
     color_mapper.high = max(r.data_source.data['timenums']) 
-	
-    slider.start = min(r.data_source.data['timenums'])
-    slider.end = max(r.data_source.data['timenums'])
+    
+    q = miniVis.miniPlot(source)
 
-    q = miniVis.miniPlot(source, "sure", "yeah", "test")
-
-    show(column(p, q))
     
 radio_button_group = RadioButtonGroup(labels = [i for i in df['disaster.event'].unique()], active = 12)
-radio_button_group.on_click(update)
+radio_button_group.on_click(disasterUpdate)
+
+time_button_group = RadioButtonGroup(labels = [str(i) for i in range(0,11)], active = 0)
+time_button_group.on_click(timeUpdate)
 
 #add slider
-def callback(attr, old, new):
+#def callback(attr, old, new):
     
-    gdf = df[df['disaster.event'] == df['disaster.event'].unique()[radio_button_group.active]][['latitude','longitude.anon', 'timenums']]
-    source.data = ColumnDataSource(data = gdf[gdf['timenums'] < new]).data
+    #gdf = df[df['disaster.event'] == df['disaster.event'].unique()[radio_button_group.active]][['latitude','longitude.anon', 'timenums']]
+    #smalData = miniVis.splitTime(gdf, 3)
+    #gdf = smalData[0]
+    #source.data = ColumnDataSource(data = gdf[gdf['timenums'] < new]).data
 
-slider = Slider(start=min(gdf.timenums), end=max(gdf.timenums), value=max(gdf.timenums), step=50000, title="time")
-slider.on_change('value', callback)
-    
-curdoc().add_root(column(radio_button_group, slider, p))
-curdoc().theme = Theme(json=yaml.load("""
-    
-    attrs: 
-        Figure:
-            background_fill_color: "#FFFFFF"
-            outline_line_color: black
-            toolbar_location: above
-            height: 1200
-            width: 1800
-    
-"""))
+#slider = Slider(start=min(gdf.timenums), end=max(gdf.timenums), value=max(gdf.timenums), step=50000, title="time")
+#slider.on_change('value', callback)
+  
+curdoc().add_root(column(radio_button_group, time_button_group, p, q, sizing_mode="scale_width"))
+curdoc().theme = 'light_minimal'
