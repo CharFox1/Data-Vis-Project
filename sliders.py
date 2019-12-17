@@ -28,12 +28,16 @@ from bokeh.models import ColumnDataSource, Circle, HoverTool, CustomJS
 from bokeh.plotting import figure
 import datetime
 import calendar
+import os
+
 import miniVis
 
 import numpy as np
 import pandas as pd
 
-df = pd.read_csv("natural_disaster_human_mobility.csv", error_bad_lines = False)
+path = os.path.dirname(os.path.realpath(__file__))
+
+# unsure what this does
 """
 # Set up data
 N = 200
@@ -89,15 +93,26 @@ curdoc().add_root(row(inputs, plot, width=800))
 curdoc().title = "Sliders"
 """
 
-#convert time to numbers and add to df
-timenums = []
-for time in df['time']: 
+
+# don't need this cause pickles!
+
+#df = pd.read_csv("natural_disaster_human_mobility.csv", error_bad_lines = False)
+
+# convert time to numbers and add to df
+#timenums = []
+#for time in df['time']: 
     
-    date = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
-    date = calendar.timegm(date.utctimetuple())
-    timenums.append(date)
+#    date = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
+#    date = calendar.timegm(date.utctimetuple())
+#    timenums.append(date)
    
-df['timenums'] = timenums
+#df['timenums'] = timenums
+
+#pd.to_pickle(df, "Data-Vis-Project/fullDataset.pkl")
+
+print("Loading dataset...")
+df = pd.read_pickle(str(path)+"/fullDataset.pkl")
+print("Loaded dataset :)")
 
 # convert numbers back to time for pretty display
 def pretty_time(time):
@@ -105,9 +120,10 @@ def pretty_time(time):
 
 #def data_viz(doc): 
 
+#miniVis.boxAndWhisker(df)
     
 #initial dataset
-gdf = df[df['disaster.event'] == '33_Baltimore'][['latitude', 'longitude.anon', 'timenums']]
+gdf = df[df['disaster.event'] == '33_Baltimore'][['latitude', 'longitude.anon', 'timenums', 'user.anon']]
 #smalData = miniVis.splitTime(gdf, 3)
 #gdf = smalData[0]
 
@@ -121,13 +137,18 @@ color_bar = ColorBar(color_mapper = color_mapper, ticker = LogTicker(),
                 label_standoff = 12, border_line_color = None, location = (0,0))
 #plot
 TOOLS="hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,box_select,poly_select,lasso_select,"
-p = figure(plot_width = 1000, plot_height = 1000, tools = TOOLS, sizing_mode="scale_width")
-r = p.scatter(x = 'longitude.anon', y = 'latitude', source = source, color = {'field': 'timenums', 'transform': color_mapper})
+p = figure(plot_width = 1000, plot_height = 1000, tools = TOOLS, sizing_mode="scale_height", match_aspect=True)
+r = p.scatter(x = 'latitude', y = 'longitude.anon', source = source, color = {'field': 'timenums', 'transform': color_mapper})
 p.add_layout(color_bar, 'right')
 
-q = miniVis.miniPlot(gdf)
+(x,y) = miniVis.miniPlot(gdf)
+miniSource = ColumnDataSource(data=dict(x=x,y=y))
+q = figure(width=1000, height=200, tools="", x_axis_type="datetime", toolbar_location=None, title='Tweet Density Per Hour', sizing_mode="scale_width")
+q.line(x = 'x', y = 'y', source=miniSource, line_width=3, color='teal')
 
-#add radio buttons
+t = miniVis.boxPlot(df)
+
+#add radio button
 def disasterUpdate(new): 
         
     update(new, time_button_group.active)
@@ -139,7 +160,10 @@ def timeUpdate(new):
 
 def update(disaster, time): 
 
-    gdf = df[df['disaster.event'] == df['disaster.event'].unique()[radio_button_group.active]][['latitude','longitude.anon', 'timenums']]
+    gdf = df[df['disaster.event'] == df['disaster.event'].unique()[radio_button_group.active]][['latitude','longitude.anon', 'timenums', 'user.anon']]
+
+    (x,y) = miniVis.miniPlot(gdf)
+    miniSource.data = dict(x=x, y=y)
 
     if(time_button_group.active > 0): 
 
@@ -153,8 +177,7 @@ def update(disaster, time):
     
     color_mapper.low = min(r.data_source.data['timenums'])
     color_mapper.high = max(r.data_source.data['timenums']) 
-    
-    q = miniVis.miniPlot(source)
+
 
     
 radio_button_group = RadioButtonGroup(labels = [i for i in df['disaster.event'].unique()], active = 12)
@@ -174,5 +197,8 @@ time_button_group.on_click(timeUpdate)
 #slider = Slider(start=min(gdf.timenums), end=max(gdf.timenums), value=max(gdf.timenums), step=50000, title="time")
 #slider.on_change('value', callback)
   
-curdoc().add_root(column(radio_button_group, time_button_group, p, q, sizing_mode="scale_width"))
+buttons = column(radio_button_group, time_button_group, sizing_mode="stretch_width")
+images = column(row(p, t), q, sizing_mode="stretch_both")
+
+curdoc().add_root(column(buttons, images, sizing_mode="stretch_both"))
 curdoc().theme = 'light_minimal'
